@@ -1,39 +1,22 @@
-import { useEffect } from "react";
-import "./App.css";
-import Graph from "graphology";
-import gexf from "graphology-gexf";
-import { SigmaContainer, useSigma } from "@react-sigma/core";
+import { SigmaContainer } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
-import { circular } from "graphology-layout";
 import LayoutToggle from "./components/LayoutToggle";
-
-function LoadGraph() {
-  const sigma = useSigma();
-
-  useEffect(() => {
-    fetch("./data/airlines.gexf")
-      .then((res) => res.text())
-      .then((xml) => {
-        const parsed = gexf.parse(Graph, xml);
-
-        circular.assign(parsed);
-
-        console.log("Graph parsed.");
-
-        sigma.setGraph(parsed);
-      });
-  }, []);
-
-  return null;
-}
+import GraphLoader from "./components/GraphLoader";
 
 export default function App() {
   return (
-    <SigmaContainer
-      style={{ height: "600px", width: "600px", position: "relative" }}
-    >
-      <LayoutToggle />
-      <LoadGraph />
-    </SigmaContainer>
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <SigmaContainer
+        style={{
+          height: "100%",
+          width: "100%",
+          position: "relative",
+          backgroundColor: "#030f2b",
+        }}
+      >
+        <LayoutToggle />
+        <GraphLoader />
+      </SigmaContainer>
+    </div>
   );
 }
