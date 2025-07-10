@@ -7,7 +7,11 @@ import { useLayoutNoverlap } from "@react-sigma/layout-noverlap";
 
 export default function LayoutToggle() {
   const sigma = useSigma();
+  const [layout, setLayout] = useState<"forceAtlas2" | "circular" | "noverlap">(
+    "circular"
+  );
 
+  // layout hooks
   const forceAtlas2 = useLayoutForceAtlas2({ iterations: 500 });
   const circularLayout = useLayoutCircular();
   const noverlapLayout = useLayoutNoverlap({ maxIterations: 500 });
@@ -17,10 +21,6 @@ export default function LayoutToggle() {
     forceAtlas2: forceAtlas2,
     noverlap: noverlapLayout,
   };
-
-  const [layout, setLayout] = useState<"forceAtlas2" | "circular" | "noverlap">(
-    "circular"
-  );
 
   const handleChangeLayout = (newLayout: typeof layout) => {
     setLayout(newLayout);

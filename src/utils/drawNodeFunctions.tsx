@@ -20,7 +20,9 @@ export function drawNodeLabel(
   const label = data.label;
   if (!label) return;
 
-  const fontSize = settings.labelSize || 14;
+  let fontSize = settings.labelSize || 14;
+  if (data.highlight) fontSize *= 1.1;
+
   ctx.font = `${fontSize}px sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -38,6 +40,6 @@ export function drawNodeLabel(
     bgHeight
   );
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = data.highlight ? "#ffffff" : "#cccccc";
   ctx.fillText(label, data.x, data.y - data.size - bgHeight / 2 - 2);
 }
