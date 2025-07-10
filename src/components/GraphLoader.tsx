@@ -1,31 +1,40 @@
+// components/GraphLoader.tsx
 import { useEffect, useState } from "react";
 import Graph from "graphology";
 import gexf from "graphology-gexf";
 import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
+
 import "@react-sigma/core/lib/style.css";
-import { circular } from "graphology-layout";
+
+import { useGraphLayout, type LayoutType } from "../hooks/useGraphLayout";
 import { drawNodeHover, drawNodeLabel } from "../utils/drawNodeFunctions";
 
-export default function GraphLoader() {
+import { circular } from "graphology-layout";
+import { LoadingScreen } from "./LoadingScreen";
+
+export default function GraphLoader({
+  gexfData,
+  initialLayout,
+}: {
+  gexfData: string;
+  initialLayout: LayoutType | LayoutType[];
+}) {
   const sigma = useSigma();
-
   const registerEvents = useRegisterEvents();
+  const setSettings = useSetSettings();
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-  const setSettings = useSetSettings(); // for dynamically setting the graph's settings
-
-  const [selectedNode, setSelectedNode] = useState<string | null>(null); // node clicked by the user
-
-  // fetch and initialize graph
+  const { runLayouts, isLayoutRunning } = useGraphLayout();
+  console.log(isLayoutRunning);
   useEffect(() => {
-    fetch("./data/flood_communities.gexf")
+    fetch(gexfData)
       .then((res) => res.text())
       .then((xml) => {
         const parsed = gexf.parse(Graph, xml);
 
-        // Assign circular layout by default
+        // Always assign circular first for base positions
         circular.assign(parsed);
 
-        // Set node's sizes based on degree, set highlight flag to false by default
         parsed.forEachNode((node) => {
           const degree = parsed.degree(node);
           parsed.setNodeAttribute(
@@ -33,66 +42,56 @@ export default function GraphLoader() {
             "size",
             Math.min(1 + Math.sqrt(degree), 18)
           );
-          const color = parsed.getNodeAttribute(node, "1");
-          if (color) {
-            parsed.setNodeAttribute(node, "color", color);
+
+          const customColor = parsed.getNodeAttribute(node, "1");
+          if (customColor) {
+            parsed.setNodeAttribute(node, "color", customColor);
           }
+
           parsed.setNodeAttribute(node, "highlight", false);
         });
 
-        // hide all edge initially
         parsed.forEachEdge((edge) => {
           parsed.setEdgeAttribute(edge, "hidden", true);
         });
 
         sigma.setGraph(parsed);
 
-        // Register click and hover events
+        // Register interaction events
         registerEvents({
-          clickNode: ({ node }) => {
-            setSelectedNode(node);
-          },
-          enterNode: ({ node }) => {
-            sigma.getGraph().setNodeAttribute(node, "highlight", true);
-          },
-          leaveNode: ({ node }) => {
-            sigma.getGraph().setNodeAttribute(node, "highlight", false);
-          },
-
-          clickStage: () => {
-            setSelectedNode(null);
-          },
+          clickNode: ({ node }) => setSelectedNode(node),
+          enterNode: ({ node }) =>
+            sigma.getGraph().setNodeAttribute(node, "highlight", true),
+          leaveNode: ({ node }) =>
+            sigma.getGraph().setNodeAttribute(node, "highlight", false),
+          clickStage: () => setSelectedNode(null),
         });
-      });
-  }, [sigma, registerEvents]);
 
-  // set settings
+        // After initial circular, apply requested layout with animation
+        // runLayouts(initialLayout);
+      });
+  }, [gexfData, sigma, registerEvents, runLayouts, initialLayout]);
+
   useEffect(() => {
     setSettings({
       renderLabels: true,
       labelSize: 12,
       labelRenderedSizeThreshold: 8,
-
       zIndex: true,
-      defaultEdgeColor: "rgba(3, 15, 43,0.001)",
-
-      defaultDrawNodeHover: (ctx, data, settings) =>
-        drawNodeHover(ctx, data, settings),
-      defaultDrawNodeLabel: (ctx, data, settings) =>
-        drawNodeLabel(ctx, data, settings),
-
+      defaultEdgeColor: "rgba(3, 15, 43, 0.1)",
+      defaultDrawNodeHover: drawNodeHover,
+      defaultDrawNodeLabel: drawNodeLabel,
       nodeReducer: (node, data) => {
         const graph = sigma.getGraph();
-
-        // set custom properties for selected node and its neighbors
         if (!selectedNode) return data;
+
         if (
-          node == selectedNode ||
+          node === selectedNode ||
           graph.neighbors(selectedNode).includes(node)
         ) {
           return { ...data, zIndex: 1 };
         } else {
-          return { ...data, color: "#030d2b02", label: null }; // fade out unselected
+          return { ...data, color: "#030d2b02", label: null };
         }
       },
       edgeReducer: (edge, data) => {
@@ -100,15 +99,15 @@ export default function GraphLoader() {
         const source = graph.source(edge);
         const target = graph.target(edge);
 
-        // show an edge only if it is connected to selected node
         if (!selectedNode) return { ...data, hidden: true };
 
-        if (source == selectedNode || target == selectedNode)
-          return { ...data, hidden: false };
-        else return { ...data, hidden: true };
+        return source === selectedNode || target === selectedNode
+          ? { ...data, hidden: false }
+          : { ...data, hidden: true };
       },
     });
-  }, [selectedNode]);
+  }, [selectedNode, sigma, setSettings]);
 
+  if (isLayoutRunning) return <LoadingScreen text={`Loading...`} />;
   return null;
 }

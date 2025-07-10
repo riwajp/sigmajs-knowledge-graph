@@ -17,6 +17,8 @@
     "@react-sigma/layout-noverlap": "^5.0.4",
     "graphology": "^0.26.0",
     "graphology-gexf": "^0.13.2",
+    "graphology-layout-forceatlas2": "^0.10.1",
+    "graphology-layout-noverlap": "^0.4.2",
     "graphology-types": "^0.24.8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
