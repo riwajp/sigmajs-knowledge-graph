@@ -1,7 +1,6 @@
 import { SigmaContainer } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
 import GraphLoader from "./components/GraphLoader";
-import LayoutToggle from "./components/LayoutToggle";
 
 export default function App() {
   return (
@@ -14,11 +13,7 @@ export default function App() {
           backgroundColor: "#030f2b",
         }}
       >
-        <GraphLoader
-          gexfData="./data/flood_communities.gexf"
-          initialLayout={["forceAtlas2", "noverlap"]}
-        />
-        <LayoutToggle />
+        <GraphLoader gexfData="./data/airlines.gexf" layout={"forceAtlas2"} />
       </SigmaContainer>
     </div>
   );

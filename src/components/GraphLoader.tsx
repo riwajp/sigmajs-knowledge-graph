@@ -6,35 +6,35 @@ import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
 
 import "@react-sigma/core/lib/style.css";
 
-import { useGraphLayout, type LayoutType } from "../hooks/useGraphLayout";
 import { drawNodeHover, drawNodeLabel } from "../utils/drawNodeFunctions";
 
 import { circular } from "graphology-layout";
-import { LoadingScreen } from "./LoadingScreen";
+
+import GraphLayoutControl, { type LayoutType } from "./GraphLayoutControl";
 
 export default function GraphLoader({
   gexfData,
-  initialLayout,
+  layout,
 }: {
   gexfData: string;
-  initialLayout: LayoutType | LayoutType[];
+  layout: LayoutType;
 }) {
   const sigma = useSigma();
   const registerEvents = useRegisterEvents();
   const setSettings = useSetSettings();
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-  const { runLayouts, isLayoutRunning } = useGraphLayout();
-  console.log(isLayoutRunning);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [graphLoaded, setGraphLoaded] = useState(false);
+
   useEffect(() => {
     fetch(gexfData)
       .then((res) => res.text())
       .then((xml) => {
         const parsed = gexf.parse(Graph, xml);
 
-        // Always assign circular first for base positions
         circular.assign(parsed);
 
+        console.log("Circle assigned");
         parsed.forEachNode((node) => {
           const degree = parsed.degree(node);
           parsed.setNodeAttribute(
@@ -56,8 +56,8 @@ export default function GraphLoader({
         });
 
         sigma.setGraph(parsed);
+        setGraphLoaded(true);
 
-        // Register interaction events
         registerEvents({
           clickNode: ({ node }) => setSelectedNode(node),
           enterNode: ({ node }) =>
@@ -66,11 +66,8 @@ export default function GraphLoader({
             sigma.getGraph().setNodeAttribute(node, "highlight", false),
           clickStage: () => setSelectedNode(null),
         });
-
-        // After initial circular, apply requested layout with animation
-        // runLayouts(initialLayout);
       });
-  }, [gexfData, sigma, registerEvents, runLayouts, initialLayout]);
+  }, [gexfData, sigma, registerEvents, setGraphLoaded]);
 
   useEffect(() => {
     setSettings({
@@ -81,6 +78,7 @@ export default function GraphLoader({
       defaultEdgeColor: "rgba(3, 15, 43, 0.1)",
       defaultDrawNodeHover: drawNodeHover,
       defaultDrawNodeLabel: drawNodeLabel,
+      allowInvalidContainer: true,
       nodeReducer: (node, data) => {
         const graph = sigma.getGraph();
         if (!selectedNode) return data;
@@ -108,6 +106,5 @@ export default function GraphLoader({
     });
   }, [selectedNode, sigma, setSettings]);
 
-  if (isLayoutRunning) return <LoadingScreen text={`Loading...`} />;
-  return null;
+  return graphLoaded && <GraphLayoutControl layout={layout} />;
 }
