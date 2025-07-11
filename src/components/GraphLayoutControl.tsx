@@ -19,7 +19,7 @@ export default function GraphLayoutControl({
     stop: fa2Stop,
     kill: fa2Kill,
   } = useWorkerLayoutForceAtlas2({
-    settings: { slowDown: 10, adjustSizes: true },
+    settings: { slowDown: 4, adjustSizes: true },
   });
 
   const {
@@ -37,7 +37,7 @@ export default function GraphLayoutControl({
 
     if (currentLayout === "forceAtlas2") {
       fa2Start();
-      stopTimeout = setTimeout(fa2Stop, 10000);
+      // stopTimeout = setTimeout(fa2Stop, 10000);
 
       console.log("ForceAtlas2 started");
     } else if (currentLayout === "noverlap") {

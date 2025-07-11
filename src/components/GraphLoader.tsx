@@ -40,7 +40,7 @@ export default function GraphLoader({
           parsed.setNodeAttribute(
             node,
             "size",
-            Math.min(1 + Math.sqrt(degree), 18)
+            Math.min(2 + Math.sqrt(degree), 18)
           );
 
           const customColor = parsed.getNodeAttribute(node, "1");

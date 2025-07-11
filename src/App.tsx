@@ -13,7 +13,10 @@ export default function App() {
           backgroundColor: "#030f2b",
         }}
       >
-        <GraphLoader gexfData="./data/airlines.gexf" layout={"forceAtlas2"} />
+        <GraphLoader
+          gexfData="./data/flood_communities.gexf"
+          layout={"forceAtlas2"}
+        />
       </SigmaContainer>
     </div>
   );
