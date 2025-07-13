@@ -19,7 +19,7 @@ export default function GraphLayoutControl({
     stop: fa2Stop,
     kill: fa2Kill,
   } = useWorkerLayoutForceAtlas2({
-    settings: { slowDown: 4, adjustSizes: true },
+    settings: { slowDown: 1, adjustSizes: true },
   });
 
   const {
@@ -49,6 +49,7 @@ export default function GraphLayoutControl({
 
     return () => {
       fa2Stop();
+      fa2Kill;
       noverlapStop();
       clearTimeout(stopTimeout);
       console.log("Layouts killed");
