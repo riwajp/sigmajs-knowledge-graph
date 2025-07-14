@@ -1,4 +1,3 @@
-// components/GraphLoader.tsx
 import { useEffect, useState } from "react";
 import Graph from "graphology";
 import gexf from "graphology-gexf";
@@ -9,15 +8,31 @@ import "@react-sigma/core/lib/style.css";
 import { drawNodeHover, drawNodeLabel } from "../utils/drawNodeFunctions";
 
 import { circular } from "graphology-layout";
+import { fitViewportToNodes } from "@sigma/utils";
 
 import GraphLayoutControl, { type LayoutType } from "./GraphLayoutControl";
 import TimeSelector from "./TimeSelector";
 
+// Tweet type colors
 const TWEET_TYPE_COLORS: Record<string, string> = {
-  reply: "#ff0000", // red
-  quote: "#fff300 ", // yellow
-  mention: "#1fff00 ", // green
-  retweet: "#ff00c3 ", // pink
+  reply: "#ff0000",
+  quote: "#fff300",
+  mention: "#1fff00",
+  retweet: "#ff00c3",
+};
+
+// Attributes
+const NODE_ATTRS = {
+  COMMUNITY: "community",
+  COLOR: "color",
+};
+
+const EDGE_ATTRS = {
+  DATE_PUBLISHED: "date_published",
+  FROM_USER: "from_user_screen_name",
+  TO_USER: "to_user_screen_name",
+  TWEET_TYPE: "tweet_type",
+  TWEET_URL: "tweet_url",
 };
 
 export default function GraphLoader({
@@ -36,92 +51,90 @@ export default function GraphLoader({
   const [timeRange, setTimeRange] = useState<[number, number]>([2, 6]);
   const [zoomRatio, setZoomRatio] = useState(1);
 
-  const NODE_ATTRS = {
-    COMMUNITY: "community",
-    COLOR: "color",
-  };
-
-  const EDGE_ATTRS = {
-    DATE_PUBLISHED: "date_published",
-    FROM_USER: "from_user_screen_name",
-    TO_USER: "to_user_screen_name",
-    TWEET_TYPE: "tweet_type",
-    TWEET_URL: "tweet_url",
-  };
-
+  // ---- Load and parse GEXF ----
   useEffect(() => {
-    fetch(gexfData)
-      .then((res) => res.text())
-      .then((xml) => {
-        const parsed = gexf.parse(Graph, xml);
+    const loadGraph = async () => {
+      const response = await fetch(gexfData);
+      const xml = await response.text();
 
-        circular.assign(parsed);
+      const parsed = gexf.parse(Graph, xml);
 
-        console.log("Circle assigned");
-        parsed.forEachNode((node) => {
-          const degree = parsed.degree(node);
-          parsed.setNodeAttribute(
-            node,
-            "size",
-            Math.min(2 + Math.sqrt(degree), 18)
-          );
+      // Apply circular layout
+      circular.assign(parsed);
 
-          const customColor = parsed.getNodeAttribute(node, NODE_ATTRS.COLOR);
-          if (customColor) {
-            parsed.setNodeAttribute(node, "color", customColor);
-          }
+      parsed.forEachNode((node) => {
+        const degree = parsed.degree(node);
+        parsed.setNodeAttribute(
+          node,
+          "size",
+          Math.min(2 + Math.sqrt(degree), 18)
+        );
 
-          parsed.setNodeAttribute(node, "highlight", false);
-        });
+        const customColor = parsed.getNodeAttribute(node, NODE_ATTRS.COLOR);
+        if (customColor) {
+          parsed.setNodeAttribute(node, "color", customColor);
+        }
 
-        parsed.forEachEdge((edge) => {
-          parsed.setEdgeAttribute(edge, "hidden", true);
-          const source = parsed.source(edge);
-          const target = parsed.target(edge);
-
-          const fromUser = parsed.getEdgeAttribute(edge, EDGE_ATTRS.FROM_USER);
-          const toUser = parsed.getEdgeAttribute(edge, EDGE_ATTRS.TO_USER);
-          const tweetType = parsed.getEdgeAttribute(
-            edge,
-            EDGE_ATTRS.TWEET_TYPE
-          );
-
-          console.log(source, fromUser, toUser, tweetType);
-
-          parsed.setNodeAttribute(source, "label", fromUser);
-          parsed.setNodeAttribute(target, "label", toUser);
-
-          const edgeColor = TWEET_TYPE_COLORS[tweetType];
-          console.log(edgeColor);
-          parsed.setEdgeAttribute(edge, "color", edgeColor);
-        });
-
-        sigma.setGraph(parsed);
-        setGraphLoaded(true);
-
-        registerEvents({
-          clickNode: ({ node }) => {
-            setSelectedNode(node);
-          },
-          enterNode: ({ node }) =>
-            sigma.getGraph().setNodeAttribute(node, "highlight", true),
-          leaveNode: ({ node }) =>
-            sigma.getGraph().setNodeAttribute(node, "highlight", false),
-
-          clickStage: () => setSelectedNode(null),
-        });
+        parsed.setNodeAttribute(node, "highlight", false);
       });
-  }, [gexfData, sigma, registerEvents, setGraphLoaded]);
 
+      parsed.forEachEdge((edge) => {
+        parsed.setEdgeAttribute(edge, "hidden", true);
+        const source = parsed.source(edge);
+        const target = parsed.target(edge);
+
+        const fromUser = parsed.getEdgeAttribute(edge, EDGE_ATTRS.FROM_USER);
+        const toUser = parsed.getEdgeAttribute(edge, EDGE_ATTRS.TO_USER);
+        const tweetType = parsed.getEdgeAttribute(edge, EDGE_ATTRS.TWEET_TYPE);
+
+        parsed.setNodeAttribute(source, "label", fromUser);
+        parsed.setNodeAttribute(target, "label", toUser);
+
+        const edgeColor = TWEET_TYPE_COLORS[tweetType];
+        parsed.setEdgeAttribute(edge, "color", edgeColor);
+      });
+
+      sigma.setGraph(parsed);
+      setGraphLoaded(true);
+    };
+
+    loadGraph();
+  }, [gexfData, sigma]);
+
+  // ---- Register graph events ----
+  useEffect(() => {
+    if (!graphLoaded) return;
+
+    registerEvents({
+      clickNode: ({ node }) => {
+        setSelectedNode(node);
+        const graph = sigma.getGraph();
+        const neighbors = graph.neighbors(node);
+        fitViewportToNodes(sigma, [node, ...neighbors], {});
+      },
+      enterNode: ({ node }) =>
+        sigma.getGraph().setNodeAttribute(node, "highlight", true),
+      leaveNode: ({ node }) =>
+        sigma.getGraph().setNodeAttribute(node, "highlight", false),
+      clickStage: () => setSelectedNode(null),
+    });
+  }, [graphLoaded, sigma, registerEvents]);
+
+  // ---- Camera zoom tracking ----
   useEffect(() => {
     const updateZoom = () => {
-      const zoom = sigma.getCamera().getState().ratio;
-      setZoomRatio(zoom);
+      setZoomRatio(sigma.getCamera().getState().ratio);
     };
-    sigma.getCamera().on("updated", updateZoom), [sigma];
+    const camera = sigma.getCamera();
+    camera.on("updated", updateZoom);
     updateZoom();
-  });
 
+    return () => {
+      camera.removeListener("updated", updateZoom);
+    };
+  }, [sigma]);
+
+  // ---- Dynamic settings ----
   useEffect(() => {
     setSettings({
       renderLabels: true,
@@ -132,25 +145,25 @@ export default function GraphLoader({
       defaultDrawNodeHover: drawNodeHover,
       defaultDrawNodeLabel: drawNodeLabel,
       allowInvalidContainer: true,
+
       nodeReducer: (node, data) => {
         const graph = sigma.getGraph();
-
         const size =
           graph.getNodeAttribute(node, "size") / Math.sqrt(zoomRatio);
 
-        if (!selectedNode) {
-          const hasVisibleEdge = graph.edges(node).some((edge) => {
-            const dateStr = graph.getEdgeAttribute(
-              edge,
-              EDGE_ATTRS.DATE_PUBLISHED
-            );
-            const edgeDate = new Date(dateStr);
-            const edgeHour = edgeDate.getUTCHours();
-            return edgeHour >= timeRange[0] && edgeHour <= timeRange[1];
-          });
+        const hasVisibleEdge = graph.edges(node).some((edge) => {
+          const dateStr = graph.getEdgeAttribute(
+            edge,
+            EDGE_ATTRS.DATE_PUBLISHED
+          );
+          const edgeDate = new Date(dateStr);
+          const edgeHour = edgeDate.getUTCHours();
+          return edgeHour >= timeRange[0] && edgeHour <= timeRange[1];
+        });
 
+        if (!selectedNode) {
           return hasVisibleEdge
-            ? { ...data, label: size > 8 ? data.label ?? node : null }
+            ? { ...data, label: size > 6 ? data.label ?? node : null }
             : { ...data, hidden: true };
         }
 
@@ -158,9 +171,19 @@ export default function GraphLoader({
           node === selectedNode ||
           graph.neighbors(selectedNode).includes(node)
         ) {
-          return { ...data, zIndex: 1, label: data.label ?? node };
+          return {
+            ...data,
+            zIndex: 1,
+            label: data.label ?? node,
+            hidden: !hasVisibleEdge,
+          };
         } else {
-          return { ...data, color: "#030d2b02", label: null };
+          return {
+            ...data,
+            color: "#030d2b02",
+            label: null,
+            hidden: !hasVisibleEdge,
+          };
         }
       },
 
@@ -176,7 +199,7 @@ export default function GraphLoader({
           : { ...data, hidden: true };
       },
     });
-  }, [selectedNode, timeRange, sigma, setSettings, zoomRatio]);
+  }, [selectedNode, timeRange, zoomRatio, sigma, setSettings]);
 
   return (
     graphLoaded && (

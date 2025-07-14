@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useWorkerLayoutForceAtlas2 } from "@react-sigma/layout-forceatlas2";
 import { useWorkerLayoutNoverlap } from "@react-sigma/layout-noverlap";
+import { useSigma } from "@react-sigma/core";
 
 export type LayoutType = "forceAtlas2" | "noverlap";
 
@@ -19,7 +20,12 @@ export default function GraphLayoutControl({
     stop: fa2Stop,
     kill: fa2Kill,
   } = useWorkerLayoutForceAtlas2({
-    settings: { slowDown: 1, adjustSizes: true },
+    settings: {
+      slowDown: 1,
+      adjustSizes: true,
+      gravity: 5,
+      barnesHutOptimize: true,
+    },
   });
 
   const {
@@ -30,6 +36,8 @@ export default function GraphLayoutControl({
     settings: { speed: 10 },
   });
 
+  const sigma = useSigma();
+
   useEffect(() => {
     fa2Stop();
     noverlapStop();
@@ -37,12 +45,12 @@ export default function GraphLayoutControl({
 
     if (currentLayout === "forceAtlas2") {
       fa2Start();
-      // stopTimeout = setTimeout(fa2Stop, 10000);
+      stopTimeout = setTimeout(fa2Stop, 10000);
 
       console.log("ForceAtlas2 started");
     } else if (currentLayout === "noverlap") {
       noverlapStart();
-      stopTimeout = setTimeout(noverlapStop, 500);
+      stopTimeout = setTimeout(noverlapStop, 1000);
 
       console.log("Noverlap started");
     }
@@ -62,6 +70,7 @@ export default function GraphLayoutControl({
     noverlapStart,
     noverlapStop,
     noverlapKill,
+    sigma,
   ]);
 
   return (

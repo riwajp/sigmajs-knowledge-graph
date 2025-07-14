@@ -15,6 +15,7 @@
     "@react-sigma/layout-force": "^5.0.4",
     "@react-sigma/layout-forceatlas2": "^5.0.4",
     "@react-sigma/layout-noverlap": "^5.0.4",
+    "@sigma/utils": "^3.0.0",
     "graphology": "^0.26.0",
     "graphology-gexf": "^0.13.2",
     "graphology-layout-forceatlas2": "^0.10.1",
