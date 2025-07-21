@@ -1,8 +1,4 @@
-export function drawNodeHover(
-  ctx: CanvasRenderingContext2D,
-  data: any,
-  settings: any
-) {
+export function drawNodeHover(ctx: CanvasRenderingContext2D, data: any) {
   const size = data.size * 1.5; // larger
   const color = data.color || "#999";
 
